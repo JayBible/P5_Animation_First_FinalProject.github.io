@@ -1,0 +1,195 @@
+
+let wave = false;
+let lookAround = false;
+let moveOffScreen = false;
+let x, y;
+let eyeDirection = 0;
+let animationStartTime = 0;
+let animationDuration = 0;
+let frown = false;
+let mouthChangeStartTime = 0;
+let balls = [];
+
+function setup() {
+  createCanvas(800, 800);
+  x = width / 2;
+  y = height / 3;
+  for (let i = 0; i < 7; i++) {
+    balls.push(createBall());
+  }
+}
+
+function draw() {
+  // background animation
+  if (lookAround || moveOffScreen) {
+    let elapsedTime = millis() - animationStartTime;
+    let t = elapsedTime / animationDuration;
+    let colorValue = map(sin(t * TWO_PI), -1, 1, 0, 255);
+    background(colorValue, 100, 150);
+
+    // Ball animation bouncing across the screen
+    for (let ball of balls) {
+      ball.x += ball.speedX;
+      ball.y += ball.speedY;
+
+      if (ball.x < 0 || ball.x > width) {
+        ball.speedX *= -1;
+      }
+      if (ball.y < 0 || ball.y > height) {
+        ball.speedY *= -1;
+      }
+
+      // Jelly-like texture effect
+      let jellySize = 50 + sin(frameCount * 0.1) * 10;
+      fill(255, 0, 0, 100);
+      ellipse(ball.x, ball.y, jellySize, jellySize);
+    }
+
+    // Gradually increase the number of balls
+    if (frameCount % 60 === 0 && balls.length < 20) { // Add a new ball every second, up to 20 balls
+      balls.push(createBall());
+    }
+  } else {
+    background(220);
+  }
+
+  // blonde hair, set to top of code first to make behind face
+  fill(255, 223, 0);
+  beginShape();
+  vertex(x - 70, y - 100);
+  bezierVertex(x - 50, y - 150, x + 50, y - 120, x + 50, y - 100);
+  bezierVertex(x + 80, y - 50, x + 80, y + 200, x, y + 200);
+  bezierVertex(x - 80, y + 200, x - 80, y - 50, x - 70, y - 100);
+  endShape(CLOSE);
+
+  // Face
+  fill(255, 224, 189);
+  ellipse(x, y, 170, 200);
+
+  // Neck
+  fill(255, 224, 189);
+  rect(x - 25, y + 100, 50, 60);
+
+  // torso with black jacket
+  fill(0);
+  beginShape();
+  vertex(x - 50, y + 160);
+  vertex(x + 50, y + 160);
+  vertex(x + 50, height);
+  vertex(x - 50, height);
+  endShape(CLOSE);
+
+  // Pants
+  fill(0, 0, 255); // Blue pants
+  beginShape();
+  vertex(x - 50, y + 360);
+  vertex(x + 50, y + 360);
+  vertex(x + 50, height);
+  vertex(x - 50, height);
+  endShape(CLOSE);
+
+  // Right arm
+  fill(255, 224, 189);
+  rect(x + 50, y + 160, 30, 100);
+
+  // Left arm waving
+  push();
+  translate(x - 80, y + 160);
+  if (wave) {
+    rotate(sin(frameCount * 0.1) * PI / 4 - PI / 2); // Point to the top of the screen while waving
+  }
+  fill(0); // Shirt part
+  rect(0, 0, 30, 30);
+  fill(255, 224, 189); // Tan part
+  rect(0, 30, 30, 70);
+  pop();
+
+  // Eyes
+  fill(255);
+  beginShape();
+  vertex(x - 50, y - 30);
+  bezierVertex(x - 40, y - 40, x - 20, y - 40, x - 10, y - 30);
+  bezierVertex(x - 20, y - 20, x - 40, y - 20, x - 50, y - 30);
+  endShape(CLOSE);
+
+  beginShape();
+  vertex(x + 30, y - 30);
+  bezierVertex(x + 40, y - 40, x + 60, y - 40, x + 70, y - 30);
+  bezierVertex(x + 60, y - 20, x + 40, y - 20, x + 30, y - 30);
+  endShape(CLOSE);
+
+  // Pupils
+  fill(0);
+  ellipse(x - 30 + eyeDirection, y - 30, 20, 20);
+  ellipse(x + 50 + eyeDirection, y - 30, 20, 20);
+
+  // mouth
+  fill(255, 0, 0);
+  if (frown) {
+    let mouthElapsedTime = millis() - mouthChangeStartTime;
+    let mouthT = constrain(mouthElapsedTime / 2000, 0, 1); // Gradual transition over 2 seconds
+    let mouthY = map(mouthT, 0, 1, y + 50, y + 70); // Move mouth down to create a frown
+    arc(x, mouthY, 30, 10, PI, TWO_PI); // Gradual frown
+  } else {
+    arc(x, y + 50, 30, 10, 0, PI); // Smile
+  }
+
+  // Nose
+  fill(255, 224, 189);
+  triangle(x, y, x - 10, y + 30, x + 10, y + 30);
+
+  // Look around
+  if (lookAround) {
+    eyeDirection = sin(frameCount * 0.1) * 10;
+    if (!frown) {
+      mouthChangeStartTime = millis();
+      frown = true;
+    }
+  }
+
+  // Move off screen
+  if (moveOffScreen) {
+    x += 2;
+    eyeDirection = 2;
+  }
+}
+
+function mousePressed() {
+  if (!wave) {
+    wave = true;
+    setTimeout(() => {
+      wave = false;
+      lookAround = true;
+      animationStartTime = millis();
+      animationDuration = random(2000, 5000); 
+      setTimeout(() => {
+        moveOffScreen = true;
+      }, animationDuration);
+    }, 2000);
+  }
+
+  // Check if any ball is clicked
+  for (let i = balls.length - 1; i >= 0; i--) {
+    let ball = balls[i];
+    let d = dist(mouseX, mouseY, ball.x, ball.y);
+    if (d < 25) { // Ball radius
+      balls.splice(i, 1); // Remove the ball
+    }
+  }
+}
+
+function windowResized() {
+  resizeCanvas(800, 800);
+  x = width / 2;
+  y = height / 3;
+}
+
+function createBall() {
+  return {
+    x: random(width),
+    y: random(height),
+    speedX: random(-12, 12),
+    speedY: random(-12, 12)
+  };
+}
+
